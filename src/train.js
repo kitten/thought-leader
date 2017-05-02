@@ -2,14 +2,28 @@
 
 import Network from './network'
 import { writeFileSync } from 'fs'
-import { data, charset } from './utils/data'
-import { EPOCH_SIZE, MODEL_PATH } from './constants'
+import trainingData from './utils/data'
 
-console.log('Entries:', data.length, '; Charset:', charset.length)
+import {
+  LETTER_SIZE,
+  HIDDEN_SIZES,
+  MODEL_PATH
+} from './constants'
 
-const net = new Network()
+console.log('Creating network...')
 
-console.log('Training network... (Output perplexity)')
+const net = process.env.RESTART === 'true' ?
+  Network.fromJSON(require(MODEL_PATH)) :
+  new Network(
+    trainingData,
+    LETTER_SIZE,
+    HIDDEN_SIZES
+  )
+
+console.log('Training network...')
+
+const EPOCH_SIZE = net.data.input.length
+
 for (let i = 0; i < 1000 * EPOCH_SIZE; i++) {
   const ppl = net.train()
 
@@ -17,6 +31,9 @@ for (let i = 0; i < 1000 * EPOCH_SIZE; i++) {
     const pred = net.predict()
     console.log('ppl:', ppl, '; ix:', i, '; p:', pred)
 
-    // writeFileSync(MODEL_PATH, JSON.stringify(net.toJSON()))
+    writeFileSync(MODEL_PATH, JSON.stringify(net.toJSON()))
   }
 }
+
+writeFileSync(MODEL_PATH, JSON.stringify(net.toJSON()))
+console.log('Done.')

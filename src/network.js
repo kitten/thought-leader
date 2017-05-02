@@ -6,32 +6,37 @@ import {
   Graph,
   Solver,
   initLSTM,
-  forwardLSTM,
-  samplei,
+  forwardLSTM, samplei,
   maxi
 } from './recurrent'
 
-import { charToIndex, indexToChar, randomEntry } from './utils/data'
+import TrainingData from './training-data'
 
-import {
-  MAX_GEN,
-  LETTER_SIZE,
-  HIDDEN_SIZES,
-  INPUT_SIZE,
-  OUTPUT_SIZE
-} from './constants'
+export type Params = {
+  maxGen: number,
+  inputSize: number,
+  letterSize: number,
+  hiddenSizes: number[],
+  outputSize: number
+}
 
 const forwardIndex = (
+  { hiddenSizes }: Params,
   graph: Graph,
   model: Model,
   ix: number,
   prev: Object = {}
 ) => {
   const x = graph.rowPluck(model.Wil, ix)
-  return forwardLSTM(graph, model, HIDDEN_SIZES, x, prev)
+  return forwardLSTM(graph, model, hiddenSizes, x, prev)
 }
 
-const costfun = (model: Model, text: string): Object => {
+const costfun = (
+  params: Params,
+  data: TrainingData,
+  model: Model,
+  text: string
+): Object => {
   const graph = new Graph()
 
   let log2ppl = 0
@@ -40,13 +45,18 @@ const costfun = (model: Model, text: string): Object => {
   const textLength = text.length
   for (let i = -1; i < textLength; i++) {
     // start and end tokens are zeros
-    const ixSource = i === -1 ? 0 : charToIndex[text[i]]
-    const ixTarget = i === textLength - 1 ? 0 : charToIndex[text[i + 1]]
+    const ixSource = i !== -1 ?
+      data.convertCharToIndex(text[i]) :
+      0
+
+    const ixTarget = i !== textLength - 1 ?
+      data.convertCharToIndex(text[i + 1]) :
+      0
 
     // Execute LSTM step
     const {
       o: logprobs
-    } = prev = forwardIndex(graph, model, ixSource, prev)
+    } = prev = forwardIndex(params, graph, model, ixSource, prev)
 
     // compute the softmax probabilities
     const probs = logprobs.softmax()
@@ -64,18 +74,25 @@ const costfun = (model: Model, text: string): Object => {
   return { graph, ppl }
 }
 
-const predictSentence = (model: Model, temperature: number = 1): string => {
- const graph = new Graph(false)
+const predictSentence = (
+  params: Params,
+  data: TrainingData,
+  model: Model,
+  temperature: number = 1
+): string => {
+  const graph = new Graph(false)
 
   let s = ''
   let prev
 
   while (true) {
-    const ix = s.length === 0 ? 0 : charToIndex[s[s.length - 1]]
+    const ix = s.length !== 0 ?
+      data.convertCharToIndex(s[s.length - 1]) :
+      0
 
     const {
       o: logprobs
-    } = prev = forwardIndex(graph, model, ix, prev)
+    } = prev = forwardIndex(params, graph, model, ix, prev)
 
     if (temperature !== 1) {
       const nq = logprobs.w.length
@@ -90,59 +107,95 @@ const predictSentence = (model: Model, temperature: number = 1): string => {
 
     if (
       prediction === 0 ||
-      s.length >= MAX_GEN
+      s.length >= params.maxGen
     ) {
       break
     }
 
-    s += indexToChar[prediction]
+    s += data.convertIndexToChar(prediction)
   }
 
   return s
 }
 
-const train = (solver: Solver, model: Model): number => {
-  // Sample random text entry
-  const text = randomEntry()
-  const { graph, ppl } = costfun(model, text)
-
-  // Use graph to backprop (set .dw fields in matrices)
-  graph.backward()
-
-  // Perform param update
-  solver.step(model)
-
-  // Return perplexity
-  return ppl
-}
-
 class Network {
+  data: TrainingData
   solver: Solver
   model: Model
+  params: Params
+  iterations: number
 
-  constructor() {
+  constructor(
+    input: string[],
+    letterSize: number,
+    hiddenSizes: number[]
+  ) {
+    const data = new TrainingData(input)
+    const inputSize = data.charset.length + 1
+    const outputSize = data.charset.length + 1
+
+    this.data = data
     this.solver = new Solver()
-    this.model = initLSTM(INPUT_SIZE, LETTER_SIZE, HIDDEN_SIZES, OUTPUT_SIZE)
+    this.model = initLSTM(inputSize, letterSize, hiddenSizes, outputSize)
+    this.iterations = 0
+
+    this.params = {
+      maxGen: data.maxLength,
+      inputSize,
+      letterSize,
+      hiddenSizes,
+      outputSize
+    }
   }
 
   train(): number {
-    return train(this.solver, this.model)
+    const { params, data, model, solver } = this
+
+    // Sample random text entry
+    const text = data.randomEntry()
+    const { graph, ppl } = costfun(params, data, model, text)
+
+    // Use graph to backprop (set .dw fields in matrices)
+    graph.backward()
+
+    // Perform param update
+    solver.step(model)
+
+    // Count up iterations
+    this.iterations++
+
+    // Return perplexity
+    return ppl
   }
 
   predict(temperature: number = 1): string {
-    return predictSentence(this.model, temperature)
+    return predictSentence(
+      this.params,
+      this.data,
+      this.model,
+      temperature
+    )
   }
 
   toJSON(): Object {
-    const { model } = this
-    return model.toJSON()
+    const { data, model, params, iterations } = this
+
+    return {
+      data: data.toJSON(),
+      model: model.toJSON(),
+      params,
+      iterations
+    }
   }
 
-  static fromJSON(model: Object): Network {
+  static fromJSON({ data, model, params, iterations }: Object): Network {
     const output = Object.create(Network.prototype)
 
     output.solver = new Solver()
+    output.data = TrainingData.fromJSON(data)
     output.model = Model.fromJSON(model)
+    output.params = params
+    output.iterations = iterations
 
     return output
   }

@@ -47,11 +47,16 @@ export default class Matrix {
 
   toJSON(): Object {
     const { n, d, w } = this
-    return { n, d, w }
+
+    return {
+      n,
+      d,
+      w: Array.from(w)
+    }
   }
 
   static fromJSON({ n, d, w }: Object): Matrix {
-    const arr = new Float64Array(w)
+    const arr = Float64Array.from(w)
     return new Matrix(n, d, arr)
   }
 
