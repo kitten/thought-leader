@@ -66,7 +66,12 @@ const retrieveAllTweets = screenName => {
 }
 
 const screenNames = [
-  'ken_wheeler'
+  'ken_wheeler',
+  'dan_abramov',
+  'mxstbr',
+  'kentcdodds',
+  'rauchg',
+  'thejameskyle'
 ]
 
 Promise.all(
