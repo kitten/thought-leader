@@ -2,7 +2,7 @@
 
 import Network from './network'
 import { writeFileSync } from 'fs'
-import trainingData from './utils/data'
+import trainingData from './twitter/data'
 
 import {
   LETTER_SIZE,

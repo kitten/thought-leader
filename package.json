@@ -4,17 +4,17 @@
   "main": "index.js",
   "license": "MIT",
   "scripts": {
+    "train:init": "node ./lib/train.js",
+    "train:restart": "RESTART=true node ./lib/train.js",
     "build": "babel src --out-dir lib",
     "flow": "flow check"
   },
   "dependencies": {
     "dotenv": "^4.0.0",
-    "emoji-regex": "^6.4.2",
     "glob": "^7.1.1",
     "invariant": "^2.2.2",
     "normalize-strings": "^1.1.0",
     "spliddit": "^2.1.1",
-    "synaptic": "^1.0.10",
     "twitter": "^1.7.0",
     "unescape": "^0.2.0"
   },
