@@ -1,8 +1,8 @@
 import { writeFileSync } from 'fs'
 import Twitter from 'twitter'
 
-import normaliseTweet from './utils/normalise-tweet'
-import { twitterConfig } from './constants'
+import normaliseTweet from './normalise-tweet'
+import { twitterConfig } from '../constants'
 
 const tweets = new Twitter(twitterConfig)
 
@@ -66,7 +66,7 @@ const retrieveAllTweets = screenName => {
 }
 
 const screenNames = [
-  'dan_abramov'
+  'ken_wheeler'
 ]
 
 Promise.all(
