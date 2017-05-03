@@ -1,0 +1,19 @@
+{
+  "name": "thought-leader-demo",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "scripts": {
+    "train:init": "node ./lib/train.js",
+    "train:restart": "RESTART=true node ./lib/train.js",
+    "twitter-dumper": "node ./lib/twitter/twitter-dumper.js",
+    "predict": "node ./lib/predict.js"
+  },
+  "dependencies": {
+    "dotenv": "^4.0.0",
+    "glob": "^7.1.1",
+    "normalize-strings": "^1.1.0",
+    "twitter": "^1.7.0",
+    "unescape": "^0.2.0"
+  }
+}

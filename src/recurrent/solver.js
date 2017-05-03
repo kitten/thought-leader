@@ -4,7 +4,6 @@ import Model from './model'
 import Matrix from './matrix'
 
 export default class Solver {
-  stepSize: number
   regc: number
   clipval: number
   decayRate: number
@@ -12,11 +11,9 @@ export default class Solver {
   stepCache: Map<string, Matrix>
 
   constructor(
-    stepSize: number = 0.01,
     regc: number = 0.000001,
     clipval: number = 5
   ) {
-    this.stepSize = stepSize
     this.regc = regc
     this.clipval = clipval
     this.decayRate = 0.999
@@ -24,9 +21,8 @@ export default class Solver {
     this.stepCache = new Map()
   }
 
-  step(model: Model) {
+  step(model: Model, stepSize: number = 0.01) {
     const {
-      stepSize,
       regc,
       clipval,
       decayRate,

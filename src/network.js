@@ -6,7 +6,8 @@ import {
   Graph,
   Solver,
   initLSTM,
-  forwardLSTM, samplei,
+  forwardLSTM,
+  samplei,
   maxi
 } from './recurrent'
 
@@ -148,7 +149,7 @@ class Network {
     }
   }
 
-  train(): number {
+  train(stepSize: number = 0.01): number {
     const { params, data, model, solver } = this
 
     // Sample random text entry
@@ -159,7 +160,7 @@ class Network {
     graph.backward()
 
     // Perform param update
-    solver.step(model)
+    solver.step(model, stepSize)
 
     // Count up iterations
     this.iterations++
