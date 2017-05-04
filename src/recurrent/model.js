@@ -110,7 +110,7 @@ export default class Model {
   }
 
   toJSON(): Object {
-    const { gates } = this
+    const { gates, type } = this
 
     const _gates = gates.map(gate => Object
       .keys(gate)
@@ -124,12 +124,13 @@ export default class Model {
       Wil: this.Wil.toJSON(),
       gates: _gates,
       Whd: this.Whd.toJSON(),
-      bd: this.bd.toJSON()
+      bd: this.bd.toJSON(),
+      type
     }
   }
 
-  static fromJSON({ Wil, gates, Whd, bd }: Object): Model {
-    const output = new Model()
+  static fromJSON({ Wil, gates, Whd, bd, type }: Object): Model {
+    const output = new Model(type)
 
     output.Wil = Matrix.fromJSON(Wil)
 
