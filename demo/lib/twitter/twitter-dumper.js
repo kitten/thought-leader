@@ -30,6 +30,44 @@ const retrieveTweetChunk = (baseQuery, olderThan = undefined) => (
   })
 )
 
+const keywords = [
+  'browser',
+  'js',
+  'javascript',
+  'react',
+  'angular',
+  'ember',
+  'dev',
+  'html',
+  'css',
+  'web',
+  'facebook',
+  'uber',
+  'google',
+  'tech',
+  'programm',
+  'api',
+  'app',
+  'npm',
+  'package',
+  'library',
+  'native',
+  'ecosystem',
+  'platform',
+  'component',
+  'build',
+  'tool',
+  'design',
+  'code',
+  'optimiz',
+  'client',
+  'compiler',
+  'babel',
+  'webpack'
+]
+
+const containsKeyword = text => keywords.some(k => text.includes(k))
+
 const retrieveAllTweets = screenName => {
   console.log(`Retrieving all tweets for ${screenName}...`)
 
@@ -41,9 +79,35 @@ const retrieveAllTweets = screenName => {
       console.log(screenName, 'Retrieved', totalTweets, 'tweets...')
 
       const normalisedTweets = tweets
+        .filter(({
+          lang,
+          entities: { media, urls }
+        }) => (
+          lang === 'en' &&
+          (!media || !media.length) &&
+          (!urls || !urls.length)
+        ))
+        .map(({ text, entities: { user_mentions, hashtags }}) => {
+          let tweet = text.toLowerCase()
+
+          tweet = user_mentions
+            .reduce((acc, { screen_name }) => (
+              acc.replace('@' + screen_name.toLowerCase(), '')
+            ), tweet)
+
+          tweet = hashtags
+            .reduce((acc, { text }) => (
+              acc.replace('#' + text.toLowerCase(), '')
+            ), tweet)
+
+          return tweet
+        })
         .map(normaliseTweet)
-        .filter(Boolean)
-        // .map(text => `@${screenName}: ${text}`)
+        .filter(tweet => (
+          tweet &&
+          tweet.length > 15 &&
+          containsKeyword(tweet)
+        ))
 
       if (tweets.length === 0) {
         return normalisedTweets
@@ -71,7 +135,10 @@ const screenNames = [
   'mxstbr',
   'kentcdodds',
   'rauchg',
-  'thejameskyle'
+  'thejameskyle',
+  'benlesh',
+  'addyosmani',
+  'paul_irish'
 ]
 
 Promise.all(
