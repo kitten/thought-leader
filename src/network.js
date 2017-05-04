@@ -7,13 +7,17 @@ import {
   Solver,
   initLSTM,
   forwardLSTM,
+  initGRU,
+  forwardGRU,
   samplei,
   maxi
 } from './recurrent'
 
+import type { ModelType } from './recurrent/model'
 import TrainingData from './training-data'
 
 export type Params = {
+  type: ModelType,
   maxGen: number,
   inputSize: number,
   letterSize: number,
@@ -22,14 +26,19 @@ export type Params = {
 }
 
 const forwardIndex = (
-  { hiddenSizes }: Params,
+  { type, hiddenSizes }: Params,
   graph: Graph,
   model: Model,
   ix: number,
-  prev: Object = {}
+  prev: ?Object
 ) => {
   const x = graph.rowPluck(model.Wil, ix)
-  return forwardLSTM(graph, model, hiddenSizes, x, prev)
+
+  return (
+    type === 'lstm' ?
+      forwardLSTM(graph, model, hiddenSizes, x, prev) :
+      forwardGRU(graph, model, hiddenSizes, x, prev)
+  )
 }
 
 const costfun = (
@@ -41,7 +50,7 @@ const costfun = (
   const graph = new Graph()
 
   let log2ppl = 0
-  let prev = {}
+  let prev
 
   const textLength = text.length
   for (let i = -1; i < textLength; i++) {
@@ -54,7 +63,7 @@ const costfun = (
       data.convertCharToIndex(text[i + 1]) :
       0
 
-    // Execute LSTM step
+    // Execute training step
     const {
       o: logprobs
     } = prev = forwardIndex(params, graph, model, ixSource, prev)
@@ -129,7 +138,8 @@ class Network {
   constructor(
     input: string[],
     letterSize: number,
-    hiddenSizes: number[]
+    hiddenSizes: number[],
+    type: ModelType = 'lstm'
   ) {
     const data = new TrainingData(input)
     const inputSize = data.charset.length + 1
@@ -137,11 +147,15 @@ class Network {
 
     this.data = data
     this.solver = new Solver()
-    this.model = initLSTM(inputSize, letterSize, hiddenSizes, outputSize)
     this.iterations = 0
+
+    this.model = type === 'lstm' ?
+      initLSTM(inputSize, letterSize, hiddenSizes, outputSize) :
+      initGRU(inputSize, letterSize, hiddenSizes, outputSize)
 
     this.params = {
       maxGen: data.maxLength,
+      type,
       inputSize,
       letterSize,
       hiddenSizes,

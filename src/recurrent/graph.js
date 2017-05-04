@@ -195,4 +195,29 @@ export default class Graph {
 
     return output
   }
+
+  // f(M) = 1 - M
+  oneMinus(m: Matrix): Matrix {
+    const { n, d, w } = m
+
+    const size = n * d
+    const arr = new Float64Array(size)
+    for (let i = 0; i < size; i++) {
+      arr[i] = 1 - w[i]
+    }
+
+    const output = new Matrix(n, d, arr)
+
+    const { backprop, needsBackprop } = this
+    if (needsBackprop) {
+      backprop.push(() => {
+        for (let i = 0; i < size; i++) {
+          // Derivative of z = 1 - x is -1
+          m.dw[i] -= output.dw[i]
+        }
+      })
+    }
+
+    return output
+  }
 }

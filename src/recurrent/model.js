@@ -2,22 +2,10 @@
 
 import Matrix from './matrix'
 
-export type GateModel = {
-  Wix: Matrix,
-  Wih: Matrix,
-  bi: Matrix,
-  Wfx: Matrix,
-  Wfh: Matrix,
-  bf: Matrix,
-  Wox: Matrix,
-  Woh: Matrix,
-  bo: Matrix,
-  Wcx: Matrix,
-  Wch: Matrix,
-  bc: Matrix
-}
+export type GateModel = { [string]: Matrix }
+export type ModelType = 'lstm' | 'gru'
 
-const makeGateModel = (hiddenSize: number, prevSize: number): GateModel => ({
+const makeLSTMGateModel = (hiddenSize: number, prevSize: number): GateModel => ({
   Wix: Matrix.random(hiddenSize, prevSize, 0.08),
   Wih: Matrix.random(hiddenSize, hiddenSize, 0.08),
   bi: new Matrix(hiddenSize, 1),
@@ -34,18 +22,39 @@ const makeGateModel = (hiddenSize: number, prevSize: number): GateModel => ({
   bc: new Matrix(hiddenSize, 1)
 })
 
+const makeGRUGateModel = (hiddenSize: number, prevSize: number): GateModel => ({
+  Wrx: Matrix.random(hiddenSize, prevSize, 0.08),
+  Wrh: Matrix.random(hiddenSize, hiddenSize, 0.08),
+  br: new Matrix(hiddenSize, 1),
+  Wzx: Matrix.random(hiddenSize, prevSize, 0.08),
+  Wzh: Matrix.random(hiddenSize, hiddenSize, 0.08),
+  bz: new Matrix(hiddenSize, 1),
+
+  // Cell write parameters
+  Whx: Matrix.random(hiddenSize, prevSize, 0.08),
+  Whh: Matrix.random(hiddenSize, hiddenSize, 0.08),
+  bh: new Matrix(hiddenSize, 1)
+})
+
 export default class Model {
   Wil: Matrix
   gates: GateModel[]
   Whd: Matrix
   bd: Matrix
 
-  constructor() {
+  type: ModelType
+  makeGate: Function
+
+  constructor(type: ModelType = 'lstm') {
+    this.type = type
+    this.makeGate = type === 'lstm' ? makeLSTMGateModel : makeGRUGateModel
     this.gates = []
   }
 
   addGate(hiddenSize: number, prevSize: number) {
-    this.gates.push(makeGateModel(hiddenSize, prevSize))
+    this.gates.push(
+      this.makeGate(hiddenSize, prevSize)
+    )
   }
 
   getGate(i: number): GateModel {
@@ -55,24 +64,36 @@ export default class Model {
   iterateParameters(cb: Function) {
     cb(this.Wil, 'Wil')
 
-    const { gates } = this
+    const { type, gates } = this
     const gatesSize = gates.length
 
     for (let i = 0; i < gatesSize; i++) {
       const gate = gates[i]
 
-      cb(gate.Wix, 'Wix' + i)
-      cb(gate.Wih, 'Wih' + i)
-      cb(gate.bi, 'bi' + i)
-      cb(gate.Wfx, 'Wfx' + i)
-      cb(gate.Wfh, 'Wfh' + i)
-      cb(gate.bf, 'bf' + i)
-      cb(gate.Wox, 'Wox' + i)
-      cb(gate.Woh, 'Woh' + i)
-      cb(gate.bo, 'bo' + i)
-      cb(gate.Wcx, 'Wcx' + i)
-      cb(gate.Wch, 'Wch' + i)
-      cb(gate.bc, 'bc' + i)
+      if (type === 'lstm') {
+        cb(gate.Wix, 'Wix' + i)
+        cb(gate.Wih, 'Wih' + i)
+        cb(gate.bi, 'bi' + i)
+        cb(gate.Wfx, 'Wfx' + i)
+        cb(gate.Wfh, 'Wfh' + i)
+        cb(gate.bf, 'bf' + i)
+        cb(gate.Wox, 'Wox' + i)
+        cb(gate.Woh, 'Woh' + i)
+        cb(gate.bo, 'bo' + i)
+        cb(gate.Wcx, 'Wcx' + i)
+        cb(gate.Wch, 'Wch' + i)
+        cb(gate.bc, 'bc' + i)
+      } else {
+        cb(gate.Wrx, 'Wrx' + i)
+        cb(gate.Wrh, 'Wrh' + i)
+        cb(gate.br, 'br' + i)
+        cb(gate.Wzx, 'Wzx' + i)
+        cb(gate.Wzh, 'Wzh' + i)
+        cb(gate.bz, 'bz' + i)
+        cb(gate.Whx, 'Whx' + i)
+        cb(gate.Whh, 'Whh' + i)
+        cb(gate.bh, 'bh' + i)
+      }
     }
 
     cb(this.Whd, 'Whd')

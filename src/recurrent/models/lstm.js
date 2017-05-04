@@ -1,15 +1,15 @@
 // @flow
 
-import Graph from './graph'
-import Matrix from './matrix'
-import Model from './model'
+import Graph from '../graph'
+import Matrix from '../matrix'
+import Model from '../model'
 
 export const initLSTM = (
   inputSize: number,
   letterSize: number,
-  hiddenSizes: number[], // arr
+  hiddenSizes: number[],
   outputSize: number,
-  model: Model = new Model()
+  model: Model = new Model('lstm')
 ) => {
   const _hiddenSizesSize = hiddenSizes.length
   let hiddenSize
@@ -33,18 +33,24 @@ export const initLSTM = (
   return model
 }
 
+export type LSTMResult = {
+  h: Matrix[],
+  c: Matrix[],
+  o: Matrix
+}
+
 export const forwardLSTM = (
   graph: Graph,
   model: Model,
   hiddenSizes: number[],
   x: Matrix,
-  prev: Object = {}
-): Object => {
+  prev: ?LSTMResult
+): LSTMResult => {
   const size = hiddenSizes.length
   let hiddenPrevs
   let cellPrevs
 
-  if (!prev || (!prev.h && !prev.c)) {
+  if (!prev) {
     hiddenPrevs = []
     cellPrevs = []
 
