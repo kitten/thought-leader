@@ -138,7 +138,31 @@ const screenNames = [
   'thejameskyle',
   'benlesh',
   'addyosmani',
-  'paul_irish'
+  'paul_irish',
+  '_developit',
+  'sebmarkbage',
+  'ryanflorence',
+  '_jayphelps',
+  '_ericelliott',
+  'toddmotto',
+  'sebmck',
+  'sarah_edo',
+  'cpojer',
+  'acdlite',
+  'leeb',
+  'soprano',
+  'vjeux',
+  'trueadm',
+  'mweststrate',
+  'linclark',
+  'nikgraf',
+  'mattpodwysocki',
+  'ladyleet',
+  'mjackson',
+  '_chenglou',
+  'jordwalke',
+  'andrestaltz',
+  'jevakallio'
 ]
 
 Promise.all(
