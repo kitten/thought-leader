@@ -191,6 +191,7 @@ class Node {
   inner: AnyNode[]
   input: Matrix[][]
   output: Matrix[]
+  passthrough: number[]
   id: number
 
   constructor(
@@ -203,6 +204,7 @@ class Node {
     this.bw = bw
     this.input = []
     this.output = []
+    this.passthrough = []
     this.id = -1
   }
 
@@ -244,6 +246,7 @@ class Node {
 
   forward(id: number, ...args: any[]): Matrix {
     if (this.id === id) {
+      this.passthrough[this.passthrough.length - 1]++
       return this.output[this.output.length - 1]
     }
 
@@ -251,6 +254,7 @@ class Node {
     const output = this.fw(...input)
 
     this.id = id
+    this.passthrough.push(1)
     this.input.push(input)
     this.output.push(output)
 
@@ -263,6 +267,14 @@ class Node {
       this.id = -1
       return false
     }
+
+    // Wait until all other paths to node have propagated their values
+    if (this.passthrough[this.passthrough.length - 1] > 1) {
+      this.passthrough[this.passthrough.length - 1]--
+      return false
+    }
+
+    this.passthrough.pop()
 
     const output = this.output.pop()
     const input = this.input.pop()

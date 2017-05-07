@@ -34,13 +34,14 @@ for (let i = net.iterations; i < MAX_TRAIN; i++) {
     learningRate = learningRate / (1 + DECAY * epoch)
   }
 
-  const ppl = net.train(learningRate)
+  const [ ppl, cost ] = net.train(learningRate)
 
   if (i % 100 === 0) {
     const pred = net.predict()
 
     console.log(
-      'ppl:', (ppl === ppl && ppl !== Infinity) ? ppl.toFixed(2) : ppl,
+      'ppl:', ppl,
+      '; cost:', cost,
       '; lr:', learningRate,
       '; ix:', i,
       '; e:', epoch,

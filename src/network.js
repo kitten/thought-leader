@@ -46,7 +46,8 @@ const costfun = (
   graph: Object,
   data: TrainingData,
   text: string
-): number => {
+): [number, number] => {
+  let cost = 0
   let log2ppl = 0
   let prev
 
@@ -70,14 +71,19 @@ const costfun = (
     const probs = logprobs.softmax()
 
     // accumulate cost and (base 2) log probability
-    log2ppl -= Math.log2(probs.w[ixTarget])
+    const prob = probs.w[ixTarget]
+    log2ppl -= Math.log2(prob)
+    cost -= Math.log(prob)
 
     // write gradients into log probabilities
     logprobs.dw = probs.w
     logprobs.dw[ixTarget] -= 1
   }
 
-  return Math.pow(2, log2ppl / (textLength - 1))
+  return [
+    Math.pow(2, log2ppl / (textLength - 1)),
+    cost
+  ]
 }
 
 const predictSentence = (
@@ -161,12 +167,12 @@ class Network {
       (this.model, hiddenSizes)
   }
 
-  train(stepSize: number = 0.002): number {
+  train(stepSize: number = 0.002): [number, number] {
     const { params, graph, data, model, solver } = this
 
     // Sample random text entry
     const text = data.randomEntry()
-    const ppl = costfun(params, graph, data, text)
+    const result = costfun(params, graph, data, text)
 
     // Use graph to backprop (set .dw fields in matrices)
     while (graph.o.backward()) {}
@@ -177,8 +183,8 @@ class Network {
     // Count up iterations
     this.iterations++
 
-    // Return perplexity
-    return ppl
+    // Return perplexity, cost
+    return result
   }
 
   predict(temperature: number = 1): string {
