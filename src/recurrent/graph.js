@@ -167,6 +167,7 @@ class InputNode {
   }
 
   backward() {}
+  clear() {}
 }
 
 class StaticNode {
@@ -181,6 +182,7 @@ class StaticNode {
   }
 
   backward() {}
+  clear() {}
 }
 
 type AnyNode = StaticNode | InputNode | Node
@@ -286,6 +288,18 @@ class Node {
     })
 
     return true
+  }
+
+  // If backprop isn't necessary, this can be called to clean the graph
+  clear() {
+    this.output = []
+    this.input = []
+    this.passthrough = []
+    this.id = -1
+
+    this.inner.forEach(node => {
+      node.clear()
+    })
   }
 
   getOutput(): Matrix {

@@ -188,12 +188,17 @@ class Network {
   }
 
   predict(temperature: number = 1): string {
-    return predictSentence(
+    const result = predictSentence(
       this.params,
       this.graph,
       this.data,
       temperature
     )
+
+    // Clean up graph, since prediction won't backprop
+    this.graph.o.clear()
+
+    return result
   }
 
   toJSON(): Object {
