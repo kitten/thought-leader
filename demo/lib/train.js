@@ -16,25 +16,28 @@ const net = process.env.RESTART === 'true' ?
     trainingData,
     LETTER_SIZE,
     HIDDEN_SIZES,
-    'lstm'
+    'gru'
   )
 
 console.log('Training network...')
 
-const DECAY = 0.98
+const DECAY = 0.97
 const EPOCH_SIZE = net.data.input.length
-const MAX_TRAIN = EPOCH_SIZE * 50
+const MAX_TRAIN = EPOCH_SIZE * 52
 
-let learningRate = 0.002
+let EPOCH = Math.floor(net.iterations / EPOCH_SIZE)
+let RATE = EPOCH >= 10 ?
+  0.002 * Math.pow(DECAY, EPOCH - 10) :
+  0.002
 
 for (let i = net.iterations; i < MAX_TRAIN; i++) {
-  const epoch = Math.floor(i / EPOCH_SIZE)
+  EPOCH = Math.floor(i / EPOCH_SIZE)
 
-  if (i % EPOCH_SIZE === 0 && epoch >= 10) {
-    learningRate = learningRate / (1 + DECAY * epoch)
+  if (i % EPOCH_SIZE === 0 && EPOCH >= 10) {
+    RATE = RATE * DECAY
   }
 
-  const [ ppl, cost ] = net.train(learningRate)
+  const [ ppl, cost ] = net.train(RATE)
 
   if (i % 100 === 0) {
     const pred = net.predict()
@@ -42,9 +45,9 @@ for (let i = net.iterations; i < MAX_TRAIN; i++) {
     console.log(
       'ppl:', ppl,
       '; cost:', cost,
-      '; lr:', learningRate,
+      '; lr:', RATE,
       '; ix:', i,
-      '; e:', epoch,
+      '; e:', EPOCH,
       '; p:', pred
     )
 
