@@ -136,7 +136,7 @@ export const makeGRUGraph = (model: Model, hiddenSizes: number[]) => {
 export type GRUResult = {
   c: Matrix[],
   o: Matrix,
-  b: Function
+  i: number
 }
 
 export const forwardGRU = (
@@ -146,6 +146,8 @@ export const forwardGRU = (
   prev: ?GRUResult
 ): GRUResult => {
   let cellPrevs = []
+  let il = 0
+
   if (!prev) {
     const size = hiddenSizes.length
 
@@ -153,11 +155,12 @@ export const forwardGRU = (
       cellPrevs.push(new Matrix(hiddenSizes[d], 1))
     }
   } else {
+    il = prev.i + 1
     cellPrevs = prev.c
   }
 
   // Compute forward pass
-  const output = graph.o.forward(ix, cellPrevs)
+  const output = graph.o.forward(il, ix, cellPrevs)
 
   // Retrieve hidden representation
   const cell = graph.c.map((node: Node): Matrix => node.getOutput())
@@ -165,6 +168,6 @@ export const forwardGRU = (
   return {
     c: cell,
     o: output,
-    b: () => graph.o.backward()
+    i: il
   }
 }

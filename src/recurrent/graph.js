@@ -10,6 +10,8 @@ const rowPluckFw = (mat: Matrix, ix: number) => {
   for (let i = 0; i < d; i++) {
     output.w[i] = mat.w[d * ix + i]
   }
+
+  return output
 }
 
 const rowPluckBw = (output: Matrix, mat: Matrix, ix: number) => {
@@ -160,7 +162,7 @@ class InputNode {
     this.transform = transform
   }
 
-  forward(...args: any[]): Matrix {
+  forward(id: number, ...args: any[]): Matrix {
     return this.transform(...args)
   }
 
@@ -187,8 +189,9 @@ class Node {
   fw: Function
   bw: Function
   inner: AnyNode[]
-  input: Matrix[]
-  output: ?Matrix
+  input: Matrix[][]
+  output: Matrix[]
+  id: number
 
   constructor(
     inner: AnyNode[],
@@ -199,7 +202,8 @@ class Node {
     this.fw = fw
     this.bw = bw
     this.input = []
-    this.output = new Matrix(0, 0)
+    this.output = []
+    this.id = -1
   }
 
   static rowPluck(...inner: AnyNode[]) {
@@ -238,26 +242,51 @@ class Node {
     return new StaticNode(output)
   }
 
-  forward(...args: any[]): Matrix {
-    if (this.output) {
-      return this.output
+  forward(id: number, ...args: any[]): Matrix {
+    if (this.id === id) {
+      return this.output[this.output.length - 1]
     }
 
-    this.input = this.inner.map(node => node.forward(...args))
-    this.output = this.fw(...this.input)
+    const input = this.inner.map(node => node.forward(id, ...args))
 
-    return this.output
+    let output
+    try {
+      output = this.fw(...input)
+    } catch(err) {
+      console.log('input', input)
+      console.log('fw', this.fw.name)
+      throw err
+    }
+
+    this.id = id
+    this.input.push(input)
+    this.output.push(output)
+
+    return output
   }
 
-  backward() {
-    this.bw(this.output, ...this.input)
-    this.output = undefined
-    this.inner.forEach(node => node.backward())
+  backward(): boolean {
+    // Return false if backpropagation stack is empty
+    if (this.output.length === 0) {
+      this.id = -1
+      return false
+    }
+
+    const output = this.output.pop()
+    const input = this.input.pop()
+
+    this.bw(output, ...input)
+
+    this.inner.forEach(node => {
+      node.backward()
+    })
+
+    return true
   }
 
   getOutput(): Matrix {
     // $FlowFixMe
-    return this.output
+    return this.output[this.output.length - 1]
   }
 }
 

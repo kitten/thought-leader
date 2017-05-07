@@ -162,7 +162,7 @@ class Network {
     const ppl = costfun(params, graph, data, text)
 
     // Use graph to backprop (set .dw fields in matrices)
-    graph.o.backward()
+    while (graph.o.backward()) {}
 
     // Perform param update
     solver.step(model, stepSize)
