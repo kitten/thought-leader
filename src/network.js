@@ -3,11 +3,10 @@
 import {
   Matrix,
   Model,
-  Graph,
+  Node,
   Solver,
-  initLSTM,
-  forwardLSTM,
   initGRU,
+  makeGRUGraph,
   forwardGRU,
   samplei,
   maxi
@@ -26,29 +25,23 @@ export type Params = {
 }
 
 const forwardIndex = (
-  { type, hiddenSizes }: Params,
-  graph: Graph,
-  model: Model,
+  { hiddenSizes }: Params,
+  graph: Object,
   ix: number,
   prev: ?Object
-) => {
-  const x = graph.rowPluck(model.Wil, ix)
-
-  return (
-    type === 'lstm' ?
-      forwardLSTM(graph, model, hiddenSizes, x, prev) :
-      forwardGRU(graph, model, hiddenSizes, x, prev)
-  )
-}
+) => forwardGRU(
+  graph,
+  hiddenSizes,
+  ix,
+  prev
+)
 
 const costfun = (
   params: Params,
+  graph: Object,
   data: TrainingData,
-  model: Model,
   text: string
-): Object => {
-  const graph = new Graph()
-
+): number => {
   let log2ppl = 0
   let prev
 
@@ -66,7 +59,7 @@ const costfun = (
     // Execute training step
     const {
       o: logprobs
-    } = prev = forwardIndex(params, graph, model, ixSource, prev)
+    } = prev = forwardIndex(params, graph, ixSource, prev)
 
     // compute the softmax probabilities
     const probs = logprobs.softmax()
@@ -79,19 +72,15 @@ const costfun = (
     logprobs.dw[ixTarget] -= 1
   }
 
-  const ppl = Math.pow(2, log2ppl / (textLength - 1))
-
-  return { graph, ppl }
+  return Math.pow(2, log2ppl / (textLength - 1))
 }
 
 const predictSentence = (
   params: Params,
+  graph: Object,
   data: TrainingData,
-  model: Model,
   temperature: number = 1
 ): string => {
-  const graph = new Graph(false)
-
   let s = ''
   let prev
 
@@ -100,9 +89,10 @@ const predictSentence = (
       data.convertCharToIndex(s[s.length - 1]) :
       0
 
+    // Execute prediction step
     const {
       o: logprobs
-    } = prev = forwardIndex(params, graph, model, ix, prev)
+    } = prev = forwardIndex(params, graph, ix, prev)
 
     if (temperature !== 1) {
       const nq = logprobs.w.length
@@ -133,13 +123,14 @@ class Network {
   solver: Solver
   model: Model
   params: Params
+  graph: Object
   iterations: number
 
   constructor(
     input: string[],
     letterSize: number,
     hiddenSizes: number[],
-    type: ModelType = 'lstm'
+    type: ModelType = 'gru'
   ) {
     const data = new TrainingData(input)
     const inputSize = data.charset.length + 1
@@ -149,9 +140,7 @@ class Network {
     this.solver = new Solver()
     this.iterations = 0
 
-    this.model = type === 'lstm' ?
-      initLSTM(inputSize, letterSize, hiddenSizes, outputSize) :
-      initGRU(inputSize, letterSize, hiddenSizes, outputSize)
+    this.model = initGRU(inputSize, letterSize, hiddenSizes, outputSize)
 
     this.params = {
       maxGen: data.maxLength,
@@ -161,17 +150,19 @@ class Network {
       hiddenSizes,
       outputSize
     }
+
+    this.graph = makeGRUGraph(this.model, hiddenSizes)
   }
 
   train(stepSize: number = 0.01): number {
-    const { params, data, model, solver } = this
+    const { params, graph, data, model, solver } = this
 
     // Sample random text entry
     const text = data.randomEntry()
-    const { graph, ppl } = costfun(params, data, model, text)
+    const ppl = costfun(params, graph, data, text)
 
     // Use graph to backprop (set .dw fields in matrices)
-    graph.backward()
+    graph.o.backward()
 
     // Perform param update
     solver.step(model, stepSize)
@@ -186,8 +177,8 @@ class Network {
   predict(temperature: number = 1): string {
     return predictSentence(
       this.params,
+      this.graph,
       this.data,
-      this.model,
       temperature
     )
   }

@@ -1,6 +1,6 @@
 // @flow
 
-import Graph from '../graph'
+import Node from '../graph'
 import Matrix from '../matrix'
 import Model from '../model'
 
@@ -33,23 +33,121 @@ export const initGRU = (
   return model
 }
 
+export type GRUGraph = {
+  c: Node[],
+  o: Node
+}
+
+export const makeGRUGraph = (model: Model, hiddenSizes: number[]) => {
+  const size = hiddenSizes.length
+  const ixNode = Node.input((ix: number) => ix)
+
+  let inputNode = Node.rowPluck(
+    Node.static(model.Wil),
+    ixNode
+  )
+
+  const cell: Node[] = []
+
+  for (let d = 0; d < size; d++) {
+    const cellPrevNode = Node.input((_: number, cellPrevs: Matrix[]) => (
+      cellPrevs[d]
+    ))
+
+    const rGate = Node.sigmoid(
+      Node.add(
+        Node.add(
+          Node.mul(
+            Node.static(model.getGate(d).Wrx),
+            inputNode
+          ),
+          Node.mul(
+            Node.static(model.getGate(d).Wrh),
+            cellPrevNode
+          )
+        ),
+        Node.static(model.getGate(d).br)
+      )
+    )
+
+    const zGate = Node.sigmoid(
+      Node.add(
+        Node.add(
+          Node.mul(
+            Node.static(model.getGate(d).Wzx),
+            inputNode
+          ),
+          Node.mul(
+            Node.static(model.getGate(d).Wzh),
+            cellPrevNode
+          )
+        ),
+        Node.static(model.getGate(d).bz)
+      )
+    )
+
+    const updateGate = Node.tanh(
+      Node.add(
+        Node.add(
+          Node.mul(
+            Node.static(model.getGate(d).Whx),
+            inputNode
+          ),
+          Node.mul(
+            Node.eltmul(
+              rGate,
+              cellPrevNode
+            ),
+            Node.static(model.getGate(d).Whh)
+          )
+        ),
+        Node.static(model.getGate(d).bh)
+      )
+    )
+
+    const celld = inputNode = Node.add(
+      Node.eltmul(
+        zGate,
+        cellPrevNode
+      ),
+      Node.eltmul(
+        Node.oneMinus(zGate),
+        updateGate
+      )
+    )
+
+    cell.push(celld)
+  }
+
+  const outputNode = Node.add(
+    Node.mul(
+      Node.static(model.Whd),
+      inputNode
+    ),
+    Node.static(model.bd)
+  )
+
+  return {
+    c: cell,
+    o: outputNode
+  }
+}
+
 export type GRUResult = {
   c: Matrix[],
-  o: Matrix
+  o: Matrix,
+  b: Function
 }
 
 export const forwardGRU = (
-  graph: Graph,
-  model: Model,
+  graph: GRUGraph,
   hiddenSizes: number[],
-  x: Matrix,
+  ix: number,
   prev: ?GRUResult
 ): GRUResult => {
-  const size = hiddenSizes.length
-  let cellPrevs
-
+  let cellPrevs = []
   if (!prev) {
-    cellPrevs = []
+    const size = hiddenSizes.length
 
     for (let d = 0; d < size; d++) {
       cellPrevs.push(new Matrix(hiddenSizes[d], 1))
@@ -58,71 +156,15 @@ export const forwardGRU = (
     cellPrevs = prev.c
   }
 
-  const cell: Matrix[] = []
+  // Compute forward pass
+  const output = graph.o.forward(ix, cellPrevs)
 
+  // Retrieve hidden representation
+  const cell = graph.c.map((node: Node): Matrix => node.getOutput())
 
-  for (let d = 0; d < size; d++) {
-    const inputVector = d === 0 ? x : cell[d - 1]
-    const cellPrev = cellPrevs[d]
-
-    const gateModel = model.getGate(d)
-
-    const rGate = graph.sigmoid(
-      graph.add(
-        graph.add(
-          graph.mul(gateModel.Wrx, inputVector),
-          graph.mul(gateModel.Wrh, cellPrev)
-        ),
-        gateModel.br
-      )
-    )
-
-    const zGate = graph.sigmoid(
-      graph.add(
-        graph.add(
-          graph.mul(gateModel.Wzx, inputVector),
-          graph.mul(gateModel.Wzh, cellPrev)
-        ),
-        gateModel.bz
-      )
-    )
-
-    const updateGate = graph.tanh(
-      graph.add(
-        graph.add(
-          graph.mul(gateModel.Whx, inputVector),
-          graph.mul(
-            graph.eltmul(rGate, cellPrev),
-            gateModel.Whh
-          )
-        ),
-        gateModel.bh
-      )
-    )
-
-    const celld = graph.add(
-      graph.eltmul(zGate, cellPrev),
-      graph.eltmul(
-        graph.oneMinus(zGate),
-        updateGate
-      )
-    )
-
-    cell.push(celld)
-  }
-
-  // one decoder to outputs at end
-  const output = graph.add(
-    graph.mul(
-      model.Whd,
-      cell[cell.length - 1]
-    ),
-    model.bd
-  )
-
-  // return cell memory, hidden representation and output
   return {
     c: cell,
-    o: output
+    o: output,
+    b: () => graph.o.backward()
   }
 }
