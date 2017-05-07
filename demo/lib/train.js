@@ -21,7 +21,7 @@ const net = process.env.RESTART === 'true' ?
 
 console.log('Training network...')
 
-const DECAY = 0.95
+const DECAY = 0.98
 const EPOCH_SIZE = net.data.input.length
 const MAX_TRAIN = EPOCH_SIZE * 50
 
