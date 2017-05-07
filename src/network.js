@@ -161,7 +161,7 @@ class Network {
       (this.model, hiddenSizes)
   }
 
-  train(stepSize: number = 0.01): number {
+  train(stepSize: number = 0.002): number {
     const { params, graph, data, model, solver } = this
 
     // Sample random text entry

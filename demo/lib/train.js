@@ -16,21 +16,21 @@ const net = process.env.RESTART === 'true' ?
     trainingData,
     LETTER_SIZE,
     HIDDEN_SIZES,
-    'lstm'
+    'gru'
   )
 
 console.log('Training network...')
 
-const DECAY = 0.0005
+const DECAY = 0.95
 const EPOCH_SIZE = net.data.input.length
-const MAX_TRAIN = EPOCH_SIZE * 200
+const MAX_TRAIN = EPOCH_SIZE * 50
 
-let learningRate = 0.01
+let learningRate = 0.002
 
 for (let i = net.iterations; i < MAX_TRAIN; i++) {
   const epoch = Math.floor(i / EPOCH_SIZE)
 
-  if (i > 0 && i % EPOCH_SIZE === 0) {
+  if (i % EPOCH_SIZE === 0 && epoch >= 10) {
     learningRate = learningRate / (1 + DECAY * epoch)
   }
 

@@ -12,8 +12,8 @@ const twitterConfig = {
 
 const MODEL_PATH = path.join(process.cwd(), './data/net-state.json')
 
-const LETTER_SIZE = 5
-const HIDDEN_SIZES = [ 20, 20 ]
+const LETTER_SIZE = 100
+const HIDDEN_SIZES = [ 64, 64 ]
 
 module.exports = {
   twitterConfig,

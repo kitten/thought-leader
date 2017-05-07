@@ -42,9 +42,11 @@ export default class Solver {
       const size = n * d
 
       for (let j = 0; j < size; j++) {
+        // rmsprop adaptive learning rate
         let mdwi = dw[j]
         s.w[j] = s.w[j] * decayRate + (1 - decayRate) * Math.pow(mdwi, 2)
 
+        // gradient clip
         if (mdwi > clipval) {
           mdwi = clipval
         } else if (mdwi < -clipval) {
