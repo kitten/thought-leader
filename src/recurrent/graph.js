@@ -3,221 +3,291 @@
 import Matrix from './matrix'
 import { sigm } from './util'
 
-export default class Graph {
-  needsBackprop: boolean
-  backprop: Function[]
+const rowPluckFw = (mat: Matrix, ix: number) => {
+  const { d } = mat
+  const output = new Matrix(d, 1)
 
-  constructor(needsBackprop: boolean = true) {
-    this.needsBackprop = needsBackprop
-
-    // List of functions that perform backprop in their
-    // forward pass order, so in backprop it needs to be
-    // iterated in reverse
-    this.backprop = []
+  for (let i = 0; i < d; i++) {
+    output.w[i] = mat.w[d * ix + i]
   }
 
-  backward() {
-    const { backprop } = this
+  return output
+}
 
-    for (let i = backprop.length - 1; i >= 0; i--) {
-      backprop[i]()
-    }
-  }
+const rowPluckBw = (output: Matrix, mat: Matrix, ix: number) => {
+  const { d } = mat
 
-  rowPluck(m: Matrix, ix: number): Matrix {
-    const { d, w, dw } = m
-    const output = new Matrix(d, 1)
-
-    for (let i = 0; i < d; i++) {
-      output.w[i] = w[d * ix + i]
-    }
-
-    const { backprop, needsBackprop } = this
-    if (needsBackprop) {
-      backprop.push(() => {
-        for (let i = 0; i < d; i++) {
-          dw[d * ix + i] += output.dw[i]
-        }
-      })
-    }
-
-    return output
-  }
-
-  tanh(m: Matrix): Matrix {
-    const { n, d, w, dw } = m
-    const output = new Matrix(n, d)
-    const size = n * d
-
-    for (let i = 0; i < size; i++) {
-      output.w[i] = Math.tanh(w[i])
-    }
-
-    const { backprop, needsBackprop } = this
-    if (needsBackprop) {
-      backprop.push(() => {
-        for (let i = 0; i < size; i++) {
-          // Grad for z = tanh(x) is (1 - z^2)
-          const mwi = output.w[i]
-          dw[i] += (1 - Math.pow(mwi, 2)) * output.dw[i]
-        }
-      })
-    }
-
-    return output
-  }
-
-  sigmoid(m: Matrix): Matrix {
-    const { n, d, w, dw } = m
-    const output = new Matrix(n, d)
-    const size = n * d
-
-    for (let i = 0; i < size; i++) {
-      output.w[i] = sigm(w[i])
-    }
-
-    const { backprop, needsBackprop } = this
-    if (needsBackprop) {
-      backprop.push(() => {
-        for (let i = 0; i < size; i++) {
-          // Grad for z = sigm(x) is z * (1 - z)
-          const mwi = output.w[i]
-          dw[i] += mwi * (1 - mwi) * output.dw[i]
-        }
-      })
-    }
-
-    return output
-  }
-
-  relu(m: Matrix): Matrix {
-    const { n, d } = m
-    const output = new Matrix(n, d)
-    const size = n * d
-
-    for (let i = 0; i < size; i++) {
-      output.w[i] = Math.max(0, m.w[i])
-    }
-
-    const { backprop, needsBackprop } = this
-    if (needsBackprop) {
-      backprop.push(() => {
-        for (let i = 0; i < size; i++) {
-          const mwi = output.w[i]
-          m.dw[i] += m.w[i] > 0 ? output.dw[i] : 0
-        }
-      })
-    }
-
-    return output
-  }
-
-  mul(m1: Matrix, m2: Matrix): Matrix {
-    const { n: n1, d: d1, w: w1 } = m1
-    const { n: n2, d: d2, w: w2 } = m2
-    const output = new Matrix(n1, d2)
-
-    for (let i = 0; i < n1; i++) {
-      for (let j = 0; j < d2; j++) {
-        let dot = 0
-        for (let k = 0; k < d1; k++) {
-          dot += w1[d1 * i + k] * w2[d2 * k + j]
-        }
-
-        output.w[d2 * i + j] = dot
-      }
-    }
-
-    const { backprop, needsBackprop } = this
-    if (needsBackprop) {
-      backprop.push(() => {
-        for (let i = 0; i < n1; i++) {
-          for (let j = 0; j < d2; j++) {
-            for(let k = 0; k < d1; k++) {
-              const b = output.dw[d2 * i + j]
-              m1.dw[d1 * i + k] += w2[d2 * k + j] * b
-              m2.dw[d2 * k + j] += w1[d1 * i + k] * b
-            }
-          }
-        }
-      })
-    }
-
-    return output
-  }
-
-  add(m1: Matrix, m2: Matrix): Matrix {
-    const { n, d, w: w1 } = m1
-    const { w: w2 } = m2
-
-    const size = n * d
-    const arr = new Float64Array(size)
-    for (let i = 0; i < size; i++) {
-      arr[i] = w1[i] + w2[i]
-    }
-
-    const output = new Matrix(n, d, arr)
-
-    const { backprop, needsBackprop } = this
-    if (needsBackprop) {
-      backprop.push(() => {
-        for (let i = 0; i < size; i++) {
-          m1.dw[i] += output.dw[i]
-          m2.dw[i] += output.dw[i]
-        }
-      })
-    }
-
-    return output
-  }
-
-  eltmul(m1: Matrix, m2: Matrix): Matrix {
-    const { n, d, w: w1 } = m1
-    const { w: w2 } = m2
-
-    const size = n * d
-    const arr = new Float64Array(size)
-    for (let i = 0; i < size; i++) {
-      arr[i] = w1[i] * w2[i]
-    }
-
-    const output = new Matrix(n, d, arr)
-
-    const { backprop, needsBackprop } = this
-    if (needsBackprop) {
-      backprop.push(() => {
-        for (let i = 0; i < size; i++) {
-          m1.dw[i] += m2.w[i] * output.dw[i]
-          m2.dw[i] += m1.w[i] * output.dw[i]
-        }
-      })
-    }
-
-    return output
-  }
-
-  // f(M) = 1 - M
-  oneMinus(m: Matrix): Matrix {
-    const { n, d, w } = m
-
-    const size = n * d
-    const arr = new Float64Array(size)
-    for (let i = 0; i < size; i++) {
-      arr[i] = 1 - w[i]
-    }
-
-    const output = new Matrix(n, d, arr)
-
-    const { backprop, needsBackprop } = this
-    if (needsBackprop) {
-      backprop.push(() => {
-        for (let i = 0; i < size; i++) {
-          // Derivative of z = 1 - x is -1
-          m.dw[i] -= output.dw[i]
-        }
-      })
-    }
-
-    return output
+  for (let i = 0; i < d; i++) {
+    mat.dw[d * ix + i] += output.dw[i]
   }
 }
+
+const tanhFw = (mat: Matrix) => {
+  const output = mat.empty()
+  const size = mat.w.length
+
+  for (let i = 0; i < size; i++) {
+    output.w[i] = Math.tanh(mat.w[i])
+  }
+
+  return output
+}
+
+const tanhBw = (output: Matrix, mat: Matrix) => {
+  const size = mat.w.length
+
+  for (let i = 0; i < size; i++) {
+    const mwi = output.w[i]
+    mat.dw[i] += (1 - Math.pow(mwi, 2)) * output.dw[i]
+  }
+}
+
+const sigmoidFw = (mat: Matrix) => {
+  const output = mat.empty()
+  const size = mat.w.length
+
+  for (let i = 0; i < size; i++) {
+    output.w[i] = sigm(mat.w[i])
+  }
+
+  return output
+}
+
+const sigmoidBw = (output: Matrix, mat: Matrix) => {
+  const size = mat.w.length
+
+  for (let i = 0; i < size; i++) {
+    const mwi = output.w[i]
+    mat.dw[i] += mwi * (1 - mwi) * output.dw[i]
+  }
+}
+
+const mulFw = (mat1: Matrix, mat2: Matrix) => {
+  const { n: n1, d: d1, w: w1, dw: dw1 } = mat1
+  const { n: n2, d: d2, w: w2, dw: dw2 } = mat2
+  const output = new Matrix(n1, d2)
+
+  for (let i = 0; i < n1; i++) {
+    for (let j = 0; j < d2; j++) {
+      let dot = 0
+      for (let k = 0; k < d1; k++) {
+        dot += w1[d1 * i + k] * w2[d2 * k + j]
+      }
+
+      output.w[d2 * i + j] = dot
+    }
+  }
+
+  return output
+}
+
+const mulBw = (output: Matrix, mat1: Matrix, mat2: Matrix) => {
+  const { n: n1, d: d1, w: w1, dw: dw1 } = mat1
+  const { n: n2, d: d2, w: w2, dw: dw2 } = mat2
+
+  for (let i = 0; i < n1; i++) {
+    for (let j = 0; j < d2; j++) {
+      for (let k = 0; k < d1; k++) {
+        const b = output.dw[d2 * i + j]
+        dw1[d1 * i + k] += w2[d2 * k + j] * b
+        dw2[d2 * k + j] += w1[d1 * i + k] * b
+      }
+    }
+  }
+}
+
+const addFw = (mat1: Matrix, mat2: Matrix) => {
+  const output = mat1.empty()
+  const size = mat1.w.length
+
+  for (let i = 0; i < size; i++) {
+    output.w[i] = mat1.w[i] + mat2.w[i]
+  }
+
+  return output
+}
+
+const addBw = (output: Matrix, mat1: Matrix, mat2: Matrix) => {
+  const size = mat1.w.length
+
+  for (let i = 0; i < size; i++) {
+    mat1.dw[i] += output.dw[i]
+    mat2.dw[i] += output.dw[i]
+  }
+}
+
+const eltmulFw = (mat1: Matrix, mat2: Matrix) => {
+  const output = mat1.empty()
+  const size = mat1.w.length
+
+  for (let i = 0; i < size; i++) {
+    output.w[i] = mat1.w[i] * mat2.w[i]
+  }
+
+  return output
+}
+
+const eltmulBw = (output: Matrix, mat1: Matrix, mat2: Matrix) => {
+  const size = mat1.w.length
+
+  for (let i = 0; i < size; i++) {
+    mat1.dw[i] += mat2.w[i] * output.dw[i]
+    mat2.dw[i] += mat1.w[i] * output.dw[i]
+  }
+}
+
+const oneMinusFw = (mat: Matrix) => {
+  const output = mat.empty()
+  const size = mat.w.length
+
+  for (let i = 0; i < size; i++) {
+    output.w[i] = 1 - mat.w[i]
+  }
+
+  return output
+}
+
+const oneMinusBw = (output: Matrix, mat: Matrix) => {
+  const size = mat.w.length
+
+  for (let i = 0; i < size; i++) {
+    mat.dw[i] -= output.dw[i]
+  }
+}
+
+class InputNode {
+  transform: Function
+
+  constructor(transform: Function) {
+    this.transform = transform
+  }
+
+  forward(id: number, ...args: any[]): Matrix {
+    return this.transform(...args)
+  }
+
+  backward() {}
+}
+
+class StaticNode {
+  output: Matrix
+
+  constructor(output: Matrix) {
+    this.output = output
+  }
+
+  forward(): Matrix {
+    return this.output
+  }
+
+  backward() {}
+}
+
+type AnyNode = StaticNode | InputNode | Node
+
+class Node {
+  fw: Function
+  bw: Function
+  inner: AnyNode[]
+  input: Matrix[][]
+  output: Matrix[]
+  id: number
+
+  constructor(
+    inner: AnyNode[],
+    fw: Function,
+    bw: Function
+  ) {
+    this.inner = inner
+    this.fw = fw
+    this.bw = bw
+    this.input = []
+    this.output = []
+    this.id = -1
+  }
+
+  static rowPluck(...inner: AnyNode[]) {
+    return new Node(inner, rowPluckFw, rowPluckBw)
+  }
+
+  static tanh(...inner: AnyNode[]) {
+    return new Node(inner, tanhFw, tanhBw)
+  }
+
+  static sigmoid(...inner: AnyNode[]) {
+    return new Node(inner, sigmoidFw, sigmoidBw)
+  }
+
+  static mul(...inner: AnyNode[]) {
+    return new Node(inner, mulFw, mulBw)
+  }
+
+  static add(...inner: AnyNode[]) {
+    return new Node(inner, addFw, addBw)
+  }
+
+  static eltmul(...inner: AnyNode[]) {
+    return new Node(inner, eltmulFw, eltmulBw)
+  }
+
+  static oneMinus(...inner: AnyNode[]) {
+    return new Node(inner, oneMinusFw, oneMinusBw)
+  }
+
+  static input(transform: Function) {
+    return new InputNode(transform)
+  }
+
+  static static(output: Matrix) {
+    return new StaticNode(output)
+  }
+
+  forward(id: number, ...args: any[]): Matrix {
+    if (this.id === id) {
+      return this.output[this.output.length - 1]
+    }
+
+    const input = this.inner.map(node => node.forward(id, ...args))
+
+    let output
+    try {
+      output = this.fw(...input)
+    } catch(err) {
+      console.log('input', input)
+      console.log('fw', this.fw.name)
+      throw err
+    }
+
+    this.id = id
+    this.input.push(input)
+    this.output.push(output)
+
+    return output
+  }
+
+  backward(): boolean {
+    // Return false if backpropagation stack is empty
+    if (this.output.length === 0) {
+      this.id = -1
+      return false
+    }
+
+    const output = this.output.pop()
+    const input = this.input.pop()
+
+    this.bw(output, ...input)
+
+    this.inner.forEach(node => {
+      node.backward()
+    })
+
+    return true
+  }
+
+  getOutput(): Matrix {
+    // $FlowFixMe
+    return this.output[this.output.length - 1]
+  }
+}
+
+export default Node
