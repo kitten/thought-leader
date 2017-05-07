@@ -248,15 +248,7 @@ class Node {
     }
 
     const input = this.inner.map(node => node.forward(id, ...args))
-
-    let output
-    try {
-      output = this.fw(...input)
-    } catch(err) {
-      console.log('input', input)
-      console.log('fw', this.fw.name)
-      throw err
-    }
+    const output = this.fw(...input)
 
     this.id = id
     this.input.push(input)
