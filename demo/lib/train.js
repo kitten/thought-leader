@@ -16,7 +16,7 @@ const net = process.env.RESTART === 'true' ?
     trainingData,
     LETTER_SIZE,
     HIDDEN_SIZES,
-    'gru'
+    'lstm'
   )
 
 console.log('Training network...')
