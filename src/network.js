@@ -218,7 +218,7 @@ class Network {
 
     output.data = TrainingData.fromJSON(data)
     output.model = Model.fromJSON(model)
-    output.solver = Solver.fromJSON(solver)
+    output.solver = solver ? Solver.fromJSON(solver) : new Solver()
     output.params = params
     output.iterations = iterations
 
