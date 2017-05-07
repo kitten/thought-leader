@@ -59,4 +59,22 @@ export default class Solver {
       }
     })
   }
+
+  toJSON(): Object {
+    const { stepCache, regc, clipval } = this
+
+    return {
+      regc,
+      clipval,
+      stepCache: Array.from(stepCache.entries())
+    }
+  }
+
+  static fromJSON({ stepCache, regc, clipval }: Object): Solver {
+    const output = new Solver(regc, clipval)
+
+    output.stepCache = new Map(stepCache)
+
+    return output
+  }
 }

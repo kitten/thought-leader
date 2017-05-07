@@ -197,22 +197,23 @@ class Network {
   }
 
   toJSON(): Object {
-    const { data, model, params, iterations } = this
+    const { data, model, solver, params, iterations } = this
 
     return {
       data: data.toJSON(),
       model: model.toJSON(),
+      solver: solver.toJSON(),
       params,
       iterations
     }
   }
 
-  static fromJSON({ data, model, params, iterations }: Object): Network {
+  static fromJSON({ data, model, solver, params, iterations }: Object): Network {
     const output = Object.create(Network.prototype)
 
-    output.solver = new Solver()
     output.data = TrainingData.fromJSON(data)
     output.model = Model.fromJSON(model)
+    output.solver = Solver.fromJSON(solver)
     output.params = params
     output.iterations = iterations
 
