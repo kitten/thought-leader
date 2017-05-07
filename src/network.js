@@ -202,6 +202,7 @@ class Network {
     output.model = Model.fromJSON(model)
     output.params = params
     output.iterations = iterations
+    output.graph = makeGRUGraph(output.model, params.hiddenSizes)
 
     return output
   }
