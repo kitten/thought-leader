@@ -277,7 +277,6 @@ class Node {
   }
 
   getOutput(): Matrix {
-    // $FlowFixMe
     return this.output[this.output.length - 1]
   }
 }

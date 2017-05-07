@@ -15,3 +15,4 @@ export {
 export { randi } from './random'
 export { samplei, maxi } from './util'
 export { initGRU, makeGRUGraph, forwardGRU } from './models/gru'
+export { initLSTM, makeLSTMGraph, forwardLSTM } from './models/lstm'

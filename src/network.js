@@ -8,6 +8,9 @@ import {
   initGRU,
   makeGRUGraph,
   forwardGRU,
+  initLSTM,
+  makeLSTMGraph,
+  forwardLSTM,
   samplei,
   maxi
 } from './recurrent'
@@ -25,15 +28,17 @@ export type Params = {
 }
 
 const forwardIndex = (
-  { hiddenSizes }: Params,
+  { type, hiddenSizes }: Params,
   graph: Object,
   ix: number,
   prev: ?Object
-) => forwardGRU(
-  graph,
-  hiddenSizes,
-  ix,
-  prev
+) => (
+  (type === 'gru' ? forwardGRU : forwardLSTM)(
+    graph,
+    hiddenSizes,
+    ix,
+    prev
+  )
 )
 
 const costfun = (
@@ -140,7 +145,8 @@ class Network {
     this.solver = new Solver()
     this.iterations = 0
 
-    this.model = initGRU(inputSize, letterSize, hiddenSizes, outputSize)
+    this.model = (type === 'gru' ? initGRU : initLSTM)
+      (inputSize, letterSize, hiddenSizes, outputSize)
 
     this.params = {
       maxGen: data.maxLength,
@@ -151,7 +157,8 @@ class Network {
       outputSize
     }
 
-    this.graph = makeGRUGraph(this.model, hiddenSizes)
+    this.graph = (type === 'gru' ? makeGRUGraph : makeLSTMGraph)
+      (this.model, hiddenSizes)
   }
 
   train(stepSize: number = 0.01): number {
@@ -202,7 +209,9 @@ class Network {
     output.model = Model.fromJSON(model)
     output.params = params
     output.iterations = iterations
-    output.graph = makeGRUGraph(output.model, params.hiddenSizes)
+
+    output.graph = (params.type === 'gru' ? makeGRUGraph : makeLSTMGraph)
+      (output.model, params.hiddenSizes)
 
     return output
   }

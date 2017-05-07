@@ -38,7 +38,7 @@ export type GRUGraph = {
   o: Node
 }
 
-export const makeGRUGraph = (model: Model, hiddenSizes: number[]) => {
+export const makeGRUGraph = (model: Model, hiddenSizes: number[]): GRUGraph => {
   const size = hiddenSizes.length
   const ixNode = Node.input((ix: number) => ix)
 
