@@ -5,8 +5,7 @@ const leadingDotRegex = /^\./g
 const multiWhitespaceRegex = /[\s\n]+/g
 const quoteRegex = /[“”]/g
 
-//const nonValidCharsRegex = /[^\x00-\x7F]/g
-const nonValidCharsRegex = /[^\s\w-]/g
+const nonValidCharsRegex = /[^\x00-\x7F]/g
 
 const normaliseTweet = text => unescape(
   unicodeNormalisation(text)

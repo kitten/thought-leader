@@ -63,7 +63,9 @@ const keywords = [
   'client',
   'compiler',
   'babel',
-  'webpack'
+  'webpack',
+  'redux',
+  'script'
 ]
 
 const containsKeyword = text => keywords.some(k => text.includes(k))
